@@ -6,8 +6,8 @@ import time
 import getpass
 
 #Endpoints
-my_machine="rontrompert#ronsmac"
-other_machine="surfsara#bee55"
+src_machine="rontrompert#ronsmac"
+dest_machine="surfsara#bee55"
 
 #Myproxy server
 myproxy="px.grid.sara.nl"
@@ -103,15 +103,15 @@ if __name__ == '__main__':
     api, _ = create_client_from_args()
     username=raw_input('Enter Myproxy username:')
     passwd=getpass.getpass('Enter MyProxy pass phrase:')
-    activate(my_machine)
-    activate(other_machine)
+    activate(src_machine)
+    activate(dest_machine)
 
     code, message, data = api.transfer_submission_id()
     submission_id = data["value"]
     deadline = datetime.datetime.utcnow() + datetime.timedelta(hours=max_hours)
     sync_level=None
     label=None
-    t = Transfer(submission_id, my_machine, other_machine, deadline,sync_level,label,verify_checksum=False)
+    t = Transfer(submission_id, src_machine, dest_machine, deadline,sync_level,label,verify_checksum=False)
     t.add_item("/Users/rontrompert/go.py", "/pnfs/grid.sara.nl/data/users/ron/testfile30uuu00i")
     code, reason, data = api.transfer(t)
     task_id = data["task_id"]
