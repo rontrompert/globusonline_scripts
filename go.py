@@ -1,44 +1,39 @@
 #!/usr/bin/env python
 
 from globusonline.transfer.api_client import x509_proxy, Transfer, create_client_from_args
-import traceback
 import datetime
 import time
+import getpass
 
 #Endpoints
 my_machine="rontrompert#ronsmac"
-other_machine="surfsara#dCache"
+other_machine="surfsara#bee55"
+
+#Myproxy server
+myproxy="px.grid.sara.nl"
+
+#Amount of hours that the transfers are allowed to take
+max_hours=12
+
 
 api=None
+username=None
+passwd=None
 
-def unicode_(data):
-    """
-    Coerce any type to unicode, assuming utf-8 encoding for strings.
-    """
-    if isinstance(data, unicode):
-        return data
-    if isinstance(data, str):
-        return unicode(data, "utf-8")
-    else:
-        return unicode(data)
-
-def display_activation(endpoint_name):
-    print "=== Endpoint pre-activation ==="
-    display_endpoint(endpoint_name)
-    print
+def activate(endpoint_name):
+# Try autoactivate when the proxy expires within 1 hour
+# Set 1 hour in seconds, if transfers will take longer, set the value accordingly
     code, reason, result = api.endpoint_autoactivate(endpoint_name,
-                                                     if_expires_in=600)
-    print "result: %s (%s)" % (result["code"], result["message"])
+                                                     if_expires_in=3600*max_hours)
     if result["code"].startswith("AutoActivationFailed"):
-        print "Auto activation failed, ls and transfers will likely fail!"
+# Autoactivation failed. Let's try manual activation
         reqs = api.endpoint_activation_requirements(endpoint_name, type="myproxy")[2]
-        reqs.set_requirement_value("myproxy", "hostname","px.grid.sara.nl")
-        reqs.set_requirement_value("myproxy", "username","ron")
-        reqs.set_requirement_value("myproxy", "passphrase","XXXXXXXXXXX")
+        reqs.set_requirement_value("myproxy", "hostname",myproxy)
+
+        reqs.set_requirement_value("myproxy", "username",username)
+        reqs.set_requirement_value("myproxy", "passphrase",passwd)
+        reqs.set_requirement_value("myproxy", "lifetime_in_hours",str(max_hours))
         result = api.endpoint_activate(endpoint_name,reqs)
-    print "=== Endpoint post-activation ==="
-    display_endpoint(endpoint_name)
-    print
 
 def display_endpoint(endpoint_name):
     code, reason, data = api.endpoint(endpoint_name)
@@ -70,26 +65,6 @@ def _print_endpoint(ep):
             print " (%s)" % s["subject"]
         else:
             print
-
-def display_ls(endpoint_name, path=""):
-    code, reason, data = api.endpoint_ls(endpoint_name, path)
-    # Server returns canonical path; "" maps to the users default path,
-    # which is typically their home directory "/~/".
-    path = data["path"]
-    print "Contents of %s on %s:" % (path, endpoint_name)
-    headers = "name, type, permissions, size, user, group, last_modified"
-    headers_list = headers.split(", ")
-    print headers
-    for f in data["DATA"]:
-        print ", ".join([unicode_(f[k]) for k in headers_list])
-
-def display_tasksummary():
-    code, reason, data = api.tasksummary()
-    print "Task Summary for %s:" % api.username
-    for k, v in data.iteritems():
-        if k == "DATA_TYPE":
-            continue
-        print "%3d %s" % (int(v), k.upper().ljust(9))
 
 def display_tasksummary():
     code, reason, data = api.tasksummary()
@@ -123,40 +98,23 @@ def display_task(task_id, show_subtasks=True):
             print "  subtask %s:" % t["task_id"]
             _print_task(t, 4)
 
-def wait_for_task(task_id, timeout=120):
-    status = "ACTIVE"
-    while timeout and status == "ACTIVE":
-        code, reason, data = api.task(task_id, fields="status")
-        status = data["status"]
-        time.sleep(1)
-        timeout -= 1
-
-    if status != "ACTIVE":
-        print "Task %s complete!" % task_id
-        return True
-    else:
-        print "Task still not complete after %d seconds" % timeout
-        return False
-
 if __name__ == '__main__':
 
     api, _ = create_client_from_args()
-    display_activation(my_machine)
-    display_activation(other_machine)
+    username=raw_input('Enter Myproxy username:')
+    passwd=getpass.getpass('Enter MyProxy pass phrase:')
+    activate(my_machine)
+    activate(other_machine)
 
     code, message, data = api.transfer_submission_id()
     submission_id = data["value"]
-    deadline = datetime.datetime.utcnow() + datetime.timedelta(minutes=10)
-    t = Transfer(submission_id, "rontrompert#ronsmac", "surfsara#dCache", deadline)
-    t.add_item("/Users/rontrompert/go.py", "/pnfs/grid.sara.nl/data/users/ron/testfile300")
+    deadline = datetime.datetime.utcnow() + datetime.timedelta(hours=max_hours)
+    sync_level=None
+    label=None
+    t = Transfer(submission_id, my_machine, other_machine, deadline,sync_level,label,verify_checksum=False)
+    t.add_item("/Users/rontrompert/go.py", "/pnfs/grid.sara.nl/data/users/ron/testfile30uuu00i")
     code, reason, data = api.transfer(t)
     task_id = data["task_id"]
 
     display_tasksummary(); print
     display_task(task_id); print
-
-    if wait_for_task(task_id):
-        print "=== After completion ==="
-        display_tasksummary(); print
-        display_task(task_id); print
-        display_ls("surfsara#dCache","/pnfs/grid.sara.nl/data/users/ron/"); print
