@@ -17,7 +17,7 @@ myproxy="px.grid.sara.nl"
 max_hours=12
 
 #Input file
-file="input_file"
+file="inputfile"
 
 
 api=None
@@ -118,18 +118,18 @@ if __name__ == '__main__':
     label=None
     t = Transfer(submission_id, src_machine, dest_machine, deadline,sync_level,label,verify_checksum=False)
 
-    f=open(input_file,'r')
+    f=open(file,'r')
     list=f.readlines()
     f.close
 
     for line in list:
         mtch=m.match(line)
         if mtch==None:
-            sys.stderr.write(Invalid input in input file'\n')
+            sys.stderr.write('Invalid input in input file.\n')
             sys.exit(1)
         paths=mtch.groups()
         if len(paths)!=2:
-            sys.stderr.write(Invalid input in input file'\n')
+            sys.stderr.write('Invalid input in input file.\n')
             sys.exit(1)
 
         t.add_item(paths[0], paths[1])
