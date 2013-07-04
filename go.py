@@ -4,6 +4,7 @@ from globusonline.transfer.api_client import x509_proxy, Transfer, create_client
 import datetime
 import time
 import getpass
+import re
 
 #Endpoints
 src_machine="rontrompert#ronsmac"
@@ -15,10 +16,14 @@ myproxy="px.grid.sara.nl"
 #Amount of hours that the transfers are allowed to take
 max_hours=12
 
+#Input file
+file="input_file"
+
 
 api=None
 username=None
 passwd=None
+m=re.compile('(\S+)\s+(\S+)')
 
 def activate(endpoint_name):
 # Try autoactivate when the proxy expires within 1 hour
@@ -112,7 +117,22 @@ if __name__ == '__main__':
     sync_level=None
     label=None
     t = Transfer(submission_id, src_machine, dest_machine, deadline,sync_level,label,verify_checksum=False)
-    t.add_item("/Users/rontrompert/go.py", "/pnfs/grid.sara.nl/data/users/ron/testfile30uuu00i")
+
+    f=open(input_file,'r')
+    list=f.readlines()
+    f.close
+
+    for line in list:
+        mtch=m.match(line)
+        if mtch==None:
+            sys.stderr.write(Invalid input in input file'\n')
+            sys.exit(1)
+        paths=mtch.groups()
+        if len(paths)!=2:
+            sys.stderr.write(Invalid input in input file'\n')
+            sys.exit(1)
+
+        t.add_item(paths[0], paths[1])
     code, reason, data = api.transfer(t)
     task_id = data["task_id"]
 
