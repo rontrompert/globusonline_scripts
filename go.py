@@ -8,7 +8,7 @@ import re
 
 #Endpoints
 src_machine="rontrompert#ronsmac"
-dest_machine="surfsara#bee55"
+dest_machine="surfsara#dCache_gridftp"
 
 #Myproxy server
 myproxy="px.grid.sara.nl"
