@@ -136,5 +136,5 @@ if __name__ == '__main__':
     code, reason, data = api.transfer(t)
     task_id = data["task_id"]
 
-    display_tasksummary(); print
+#    display_tasksummary(); print
     display_task(task_id); print
